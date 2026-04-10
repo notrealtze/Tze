@@ -1,0 +1,875 @@
+-- 5
+if getgenv().TZE_LOADED then
+    getgenv().TZE_LOADED = false
+    task.wait(0.1)
+end
+getgenv().TZE_LOADED = true
+
+local function isAlive()
+    return getgenv().TZE_LOADED == true
+end
+
+getgenv().TZE = {
+    ["Combat"] = {
+        Autoblock = true,
+        AutoPunish = true,
+        BlockDash = true,
+        Range = 15,
+        DynamicRange = true,
+        FacingCheck = true,
+        FacingAngle = 60,
+        BlockDelay = 0.4,
+        BlockChance = 90,
+    },
+    ["Humanize"] = {
+        RandomBlock = false,
+        ReactionDelay = false,
+        MissBlock = false,
+        AntiBait = true,
+    },
+    ["Misc"] = {
+        NoFog = true,
+        Mahito = true,
+        Gojo = true,
+        Itadori = true,
+        Todo = true,
+        Nanami = true,
+        Naoya = true,
+        LapseBlue = true,
+        TendrilGrab = true,
+        ProjectionBreaker = true,
+        Bleedout = true,
+        CursoryImpact = true,
+        DecisiveStrike = true,
+    },
+    ["Filter"] = {
+        UseWhitelist = true,
+        UseBlacklist = false,
+        Whitelist = {
+            "Melee1", "Melee2", "Melee3", "Melee4", "Up",
+            "Chase", "Shut Up", "Rising Star", "Snap Chomp",
+            "Tendril Grab", "Projection Breaker", "Resolute Slash",
+            "Blood Rain", "Piercing Blood",
+            "Clap1", "Clap2", "Clap3",
+            "Lapse Blue", "Bleedout", "Cursory Impact",
+            "Decisive Strike", "Nanami", "Naoya Spin", "Naoya Grip",
+            "Mahito", "Gojo", "Itadori", "Todo",
+        },
+        Blacklist = {},
+    },
+}
+
+local AllMoves = {
+    "Melee1", "Melee2", "Melee3", "Melee4", "Up",
+    "Chase", "Shut Up", "Rising Star", "Snap Chomp",
+    "Tendril Grab", "Projection Breaker", "Resolute Slash",
+    "Blood Rain", "Piercing Blood",
+    "Clap1", "Clap2", "Clap3",
+    "Lapse Blue", "Bleedout", "Cursory Impact",
+    "Decisive Strike", "Nanami", "Naoya Spin", "Naoya Grip",
+    "Mahito", "Gojo", "Itadori", "Todo",
+}
+
+local MoveRanges = {
+    ["Melee1"] = 8, ["Melee2"] = 8, ["Melee3"] = 8, ["Melee4"] = 8, ["Up"] = 8,
+    ["Chase"] = 20,
+    ["Shut Up"] = 10,
+    ["Rising Star"] = 30,
+    ["Snap Chomp"] = 15,
+    ["Tendril Grab"] = 25,
+    ["Projection Breaker"] = 15,
+    ["Resolute Slash"] = 8,
+    ["Blood Rain"] = 40,
+    ["Piercing Blood"] = 50,
+    ["Clap1"] = 8, ["Clap2"] = 8, ["Clap3"] = 8,
+    ["Lapse Blue"] = 30,
+    ["Bleedout"] = 8,
+    ["Cursory Impact"] = 15,
+    ["Decisive Strike"] = 8,
+    ["Nanami"] = 8,
+    ["Naoya Spin"] = 20,
+    ["Naoya Grip"] = 10,
+    ["Mahito"] = 12,
+    ["Gojo"] = 8,
+    ["Itadori"] = 8,
+    ["Todo"] = 8,
+}
+
+local function isMoveAllowed(moveName)
+    local filter = getgenv().TZE.Filter
+    if filter.UseBlacklist then
+        for _, v in ipairs(filter.Blacklist) do
+            if v == moveName then return false end
+        end
+    end
+    if filter.UseWhitelist then
+        for _, v in ipairs(filter.Whitelist) do
+            if v == moveName then return true end
+        end
+        return false
+    end
+    return true
+end
+
+local repo = "https://raw.githubusercontent.com/deividcomsono/Obsidian/main/"
+local Library = loadstring(game:HttpGet(repo .. "Library.lua"))()
+local ThemeManager = loadstring(game:HttpGet(repo .. "addons/ThemeManager.lua"))()
+local SaveManager = loadstring(game:HttpGet(repo .. "addons/SaveManager.lua"))()
+
+local Options = Library.Options
+local Toggles = Library.Toggles
+
+local Window = Library:CreateWindow({
+    Title = "TZE",
+    Footer = "jjslop",
+    Icon = 118580122370690,
+    NotifySide = "Right",
+    ShowCustomCursor = false,
+    Size = UDim2.fromOffset(500, 400),
+})
+
+local Tabs = {
+    Combat = Window:AddTab("Combat", "sword"),
+    Filter = Window:AddTab("Filter", "list-filter"),
+    Misc = Window:AddTab("Misc", "settings"),
+    ["UI Settings"] = Window:AddTab("UI Settings", "sliders-horizontal"),
+}
+
+local CombatLeft = Tabs.Combat:AddLeftGroupbox("Blocking")
+local CombatRight = Tabs.Combat:AddRightGroupbox("Punish")
+local HumanizeGroup = Tabs.Combat:AddLeftGroupbox("Humanize")
+local FilterLeft = Tabs.Filter:AddLeftGroupbox("Lists")
+local FilterRight = Tabs.Filter:AddRightGroupbox("Moves")
+local MiscLeft = Tabs.Misc:AddLeftGroupbox("Visual")
+local MiscRight = Tabs.Misc:AddRightGroupbox("Block Services")
+
+CombatLeft:AddToggle("Autoblock", {
+    Text = "Autoblock", Default = getgenv().TZE.Combat.Autoblock,
+    Callback = function(v) getgenv().TZE.Combat.Autoblock = v end,
+})
+CombatLeft:AddToggle("BlockDash", {
+    Text = "Block Dash", Default = getgenv().TZE.Combat.BlockDash,
+    Callback = function(v) getgenv().TZE.Combat.BlockDash = v end,
+})
+CombatLeft:AddToggle("DynamicRange", {
+    Text = "Dynamic Range", Default = getgenv().TZE.Combat.DynamicRange,
+    Callback = function(v) getgenv().TZE.Combat.DynamicRange = v end,
+})
+CombatLeft:AddToggle("FacingCheck", {
+    Text = "Facing Check", Default = getgenv().TZE.Combat.FacingCheck,
+    Callback = function(v) getgenv().TZE.Combat.FacingCheck = v end,
+})
+CombatLeft:AddSlider("FacingAngle", {
+    Text = "Facing Angle", Default = getgenv().TZE.Combat.FacingAngle,
+    Min = 10, Max = 180, Rounding = 0,
+    Callback = function(v) getgenv().TZE.Combat.FacingAngle = v end,
+})
+CombatLeft:AddSlider("BlockChance", {
+    Text = "Block Chance", Default = getgenv().TZE.Combat.BlockChance,
+    Min = 1, Max = 100, Rounding = 0, Suffix = "%",
+    Callback = function(v) getgenv().TZE.Combat.BlockChance = v end,
+})
+CombatLeft:AddSlider("BlockDelay", {
+    Text = "Block Delay", Default = getgenv().TZE.Combat.BlockDelay,
+    Min = 0, Max = 1, Rounding = 2, Suffix = "s",
+    Callback = function(v) getgenv().TZE.Combat.BlockDelay = v end,
+})
+CombatLeft:AddSlider("Range", {
+    Text = "Range", Default = getgenv().TZE.Combat.Range,
+    Min = 5, Max = 60, Rounding = 0, Suffix = " studs",
+    Callback = function(v) getgenv().TZE.Combat.Range = v end,
+})
+CombatRight:AddToggle("AutoPunish", {
+    Text = "Auto Punish", Default = getgenv().TZE.Combat.AutoPunish,
+    Callback = function(v) getgenv().TZE.Combat.AutoPunish = v end,
+})
+HumanizeGroup:AddToggle("RandomBlock", {
+    Text = "Random Block", Default = getgenv().TZE.Humanize.RandomBlock,
+    Callback = function(v) getgenv().TZE.Humanize.RandomBlock = v end,
+})
+HumanizeGroup:AddToggle("ReactionDelay", {
+    Text = "Reaction Delay", Default = getgenv().TZE.Humanize.ReactionDelay,
+    Callback = function(v) getgenv().TZE.Humanize.ReactionDelay = v end,
+})
+HumanizeGroup:AddToggle("MissBlock", {
+    Text = "Miss Block", Default = getgenv().TZE.Humanize.MissBlock,
+    Callback = function(v) getgenv().TZE.Humanize.MissBlock = v end,
+})
+HumanizeGroup:AddToggle("AntiBait", {
+    Text = "Anti Bait", Default = getgenv().TZE.Humanize.AntiBait,
+    Callback = function(v) getgenv().TZE.Humanize.AntiBait = v end,
+})
+
+FilterLeft:AddToggle("UseWhitelist", {
+    Text = "Whitelist", Default = getgenv().TZE.Filter.UseWhitelist,
+    Callback = function(v) getgenv().TZE.Filter.UseWhitelist = v end,
+})
+FilterLeft:AddToggle("UseBlacklist", {
+    Text = "Blacklist", Default = getgenv().TZE.Filter.UseBlacklist,
+    Callback = function(v) getgenv().TZE.Filter.UseBlacklist = v end,
+})
+
+local defaultWhitelist = {}
+for _, v in ipairs(AllMoves) do defaultWhitelist[v] = true end
+
+FilterRight:AddDropdown("WhitelistMoves", {
+    Values = AllMoves, Default = 1, Multi = true,
+    Text = "Whitelist Moves", Searchable = true,
+    Callback = function(v)
+        getgenv().TZE.Filter.Whitelist = {}
+        for move, selected in pairs(v) do
+            if selected then table.insert(getgenv().TZE.Filter.Whitelist, move) end
+        end
+    end,
+})
+Options.WhitelistMoves:SetValue(defaultWhitelist)
+
+FilterRight:AddDropdown("BlacklistMoves", {
+    Values = AllMoves, Default = 1, Multi = true,
+    Text = "Blacklist Moves", Searchable = true,
+    Callback = function(v)
+        getgenv().TZE.Filter.Blacklist = {}
+        for move, selected in pairs(v) do
+            if selected then table.insert(getgenv().TZE.Filter.Blacklist, move) end
+        end
+    end,
+})
+
+MiscLeft:AddToggle("NoFog", {
+    Text = "No Fog", Default = getgenv().TZE.Misc.NoFog,
+    Callback = function(v)
+        getgenv().TZE.Misc.NoFog = v
+        local Lighting = game:GetService("Lighting")
+        Lighting.FogEnd = v and math.huge or 100000
+        Lighting.FogStart = v and math.huge or 0
+    end,
+})
+
+local serviceToggles = {
+    { key = "Mahito",            text = "Mahito - Block on hit, Black Flash & Soul Eat" },
+    { key = "Gojo",              text = "Gojo - Block on hit, teleport drag & aerial slam" },
+    { key = "Itadori",           text = "Itadori - Block on hit, Cleave grab & Black Flash" },
+    { key = "Todo",              text = "Todo - Block on hit, grab combo & position swap" },
+    { key = "Nanami",            text = "Nanami - Block on hit & chase hit" },
+    { key = "Naoya",             text = "Naoya - Block during spin AoE & ult grab" },
+    { key = "LapseBlue",         text = "Lapse Blue - Block when pulled by Blue grab" },
+    { key = "TendrilGrab",       text = "Tendril Grab - Block entire grab duration" },
+    { key = "ProjectionBreaker", text = "Projection Breaker - Block on kick hit" },
+    { key = "Bleedout",          text = "Bleedout - Block on stab hits & freeze" },
+    { key = "CursoryImpact",     text = "Cursory Impact - Block before kick & on grab" },
+    { key = "DecisiveStrike",    text = "Decisive Strike - Block during barrage hits" },
+}
+
+for _, t in ipairs(serviceToggles) do
+    MiscRight:AddToggle(t.key .. "Toggle", {
+        Text = t.text,
+        Default = getgenv().TZE.Misc[t.key],
+        Callback = function(v) getgenv().TZE.Misc[t.key] = v end,
+    })
+end
+
+local MenuGroup = Tabs["UI Settings"]:AddLeftGroupbox("Menu", "wrench")
+MenuGroup:AddToggle("ShowCustomCursor", {
+    Text = "Custom Cursor", Default = false,
+    Callback = function(v) Library.ShowCustomCursor = v end,
+})
+MenuGroup:AddDivider()
+MenuGroup:AddLabel("Menu bind"):AddKeyPicker("MenuKeybind", { Default = "RightShift", NoUI = true, Text = "Menu keybind" })
+MenuGroup:AddButton("Unload", function() Library:Unload() end)
+Library.ToggleKeybind = Options.MenuKeybind
+
+ThemeManager:SetLibrary(Library)
+SaveManager:SetLibrary(Library)
+SaveManager:IgnoreThemeSettings()
+SaveManager:SetIgnoreIndexes({ "MenuKeybind" })
+ThemeManager:SetFolder("TZE")
+SaveManager:SetFolder("TZE/jjs")
+SaveManager:BuildConfigSection(Tabs["UI Settings"])
+ThemeManager:ApplyToTab(Tabs["UI Settings"])
+SaveManager:LoadAutoloadConfig()
+
+local RS = game:GetService("ReplicatedStorage")
+local SG = game:GetService("StarterGui")
+local Players = game:GetService("Players")
+local Stats = game:GetService("Stats")
+local RunService = game:GetService("RunService")
+local LocalPlayer = Players.LocalPlayer
+
+local dt = 0
+RunService.Heartbeat:Connect(function(d) dt = d end)
+
+local Knit = RS:WaitForChild("Knit"):WaitForChild("Knit"):WaitForChild("Services")
+
+local function getService(name)
+    return Knit:WaitForChild(name):WaitForChild("RE")
+end
+
+local BlockRE = getService("BlockService")
+local BlockActivate = BlockRE:WaitForChild("Activated")
+local BlockDeactivate = BlockRE:WaitForChild("Deactivated")
+local AnimFolder = RS:WaitForChild("Animations")
+
+local BlockableNames = { "Melee1", "Melee2", "Melee3", "Melee4", "Up" }
+local DashNames = { "Chase" }
+local BlockableIDs = {}
+local DashIDs = {}
+local SpecialAnims = {}
+
+local function loadAnim(path)
+    local obj = AnimFolder
+    for _, part in ipairs(path) do
+        obj = obj:FindFirstChild(part)
+        if not obj then return end
+    end
+    return obj
+end
+
+local function registerSpecial(path, config)
+    local anim = loadAnim(path)
+    if anim then SpecialAnims[anim.AnimationId] = config end
+end
+
+for _, charFolder in ipairs(AnimFolder:GetChildren()) do
+    if charFolder:IsA("Folder") then
+        local meleeFolder = charFolder:FindFirstChild("Melee")
+        if meleeFolder then
+            for _, anim in ipairs(meleeFolder:GetChildren()) do
+                for _, blockable in ipairs(BlockableNames) do
+                    if anim.Name == blockable then BlockableIDs[anim.AnimationId] = true end
+                end
+                for _, dash in ipairs(DashNames) do
+                    if anim.Name == dash then DashIDs[anim.AnimationId] = true end
+                end
+            end
+        end
+    end
+end
+
+local todoFolder = AnimFolder:FindFirstChild("Todo")
+if todoFolder then
+    for _, anim in ipairs(todoFolder:GetChildren()) do
+        if anim.Name == "Clap1" or anim.Name == "Clap2" or anim.Name == "Clap3" then
+            BlockableIDs[anim.AnimationId] = true
+        end
+    end
+end
+
+registerSpecial({"Charles", "ShutUp"},         { blockIfFacingAway = true, name = "Shut Up" })
+registerSpecial({"Yuki", "RisingStar"},         { holdExtra = 1.5, name = "Rising Star" })
+registerSpecial({"Locust", "SnapChomp"},        { punishMidAnim = true, name = "Snap Chomp" })
+registerSpecial({"Naoya", "TendrilGrab"},       { holdExtra = 0.6, name = "Tendril Grab" })
+registerSpecial({"Naoya", "ProjectionBreaker"}, { holdExtra = 0.6, name = "Projection Breaker" })
+registerSpecial({"Yuta", "ResoluteSlash"},      { turnCamera = true, name = "Resolute Slash" })
+registerSpecial({"Choso", "BloodRain"},         { fullDuration = true, name = "Blood Rain" })
+registerSpecial({"Choso", "PiercingBlood"},     { fullDuration = true, name = "Piercing Blood" })
+
+if getgenv().TZE.Misc.NoFog then
+    local Lighting = game:GetService("Lighting")
+    Lighting.FogEnd = math.huge
+    Lighting.FogStart = math.huge
+end
+
+SG:SetCore("SendNotification", {
+    Title = "TZE", Text = "Loaded",
+    Button1 = "Yes", Button2 = "hell na", Duration = 10
+})
+
+local Characters = {}
+local blocking = false
+local m1Cooldown = false
+
+local function getPing()
+    return Stats.Network.ServerStatsItem["Data Ping"]:GetValue()
+end
+
+local function getBlockDelay()
+    local base = getgenv().TZE.Combat.BlockDelay
+    local ping = getPing() / 1000
+    local jitter = getgenv().TZE.Humanize.ReactionDelay and math.random(0, 150) / 1000 or 0
+    return math.max(0, base - ping) + jitter
+end
+
+local function getRange(moveName)
+    if getgenv().TZE.Combat.DynamicRange and moveName and MoveRanges[moveName] then
+        return MoveRanges[moveName]
+    end
+    return getgenv().TZE.Combat.Range
+end
+
+local function fireM1()
+    if not getgenv().TZE.Combat.AutoPunish then return end
+    if not isAlive() then return end
+    if m1Cooldown then return end
+    local char = LocalPlayer.Character
+    if not char then return end
+    local moveset = char:GetAttribute("Moveset")
+    if not moveset then return end
+    local service = RS.Knit.Knit.Services:FindFirstChild(moveset .. "Service")
+    if not service then return end
+    m1Cooldown = true
+    service.RE.Activated:FireServer(false)
+    task.delay(2, function() m1Cooldown = false end)
+end
+
+local function setBlock(state)
+    if blocking == state then return end
+    blocking = state
+    if state then
+        BlockActivate:FireServer()
+    else
+        BlockDeactivate:FireServer()
+    end
+end
+
+local function getTargetName(target)
+    local player = Players:GetPlayerFromCharacter(target)
+    if player then return player.Name end
+    return target.Name
+end
+
+local function isLocalPlayer(target)
+    if target == LocalPlayer.Character then return true end
+    if target.Name == LocalPlayer.Name then return true end
+    if Players:GetPlayerFromCharacter(target) == LocalPlayer then return true end
+    return false
+end
+
+local function isFacing(target)
+    local char = LocalPlayer.Character
+    if not char then return false end
+    local root = char:FindFirstChild("HumanoidRootPart")
+    local troot = target:FindFirstChild("HumanoidRootPart")
+    if not root or not troot then return false end
+    local toTarget = (troot.Position - root.Position).Unit
+    local threshold = math.cos(math.rad(getgenv().TZE.Combat.FacingAngle))
+    return root.CFrame.LookVector:Dot(toTarget) > threshold
+end
+
+local function isFacingAway(target)
+    local char = LocalPlayer.Character
+    if not char then return false end
+    local root = char:FindFirstChild("HumanoidRootPart")
+    local troot = target:FindFirstChild("HumanoidRootPart")
+    if not root or not troot then return false end
+    local toUs = (root.Position - troot.Position).Unit
+    local threshold = math.cos(math.rad(getgenv().TZE.Combat.FacingAngle))
+    return troot.CFrame.LookVector:Dot(toUs) < -threshold
+end
+
+local function inRange(target, moveName)
+    local char = LocalPlayer.Character
+    if not char then return false end
+    local root = char:FindFirstChild("HumanoidRootPart")
+    local troot = target:FindFirstChild("HumanoidRootPart")
+    if not root or not troot then return false end
+    return (root.Position - troot.Position).Magnitude <= getRange(moveName)
+end
+
+local function turnToFace(target)
+    local char = LocalPlayer.Character
+    if not char then return end
+    local root = char:FindFirstChild("HumanoidRootPart")
+    local troot = target:FindFirstChild("HumanoidRootPart")
+    if not root or not troot then return end
+    local dir = (troot.Position - root.Position).Unit
+    workspace.CurrentCamera.CFrame = CFrame.new(workspace.CurrentCamera.CFrame.Position, workspace.CurrentCamera.CFrame.Position + dir)
+end
+
+local function isMe(target)
+    return target == LocalPlayer.Character
+end
+
+local function blockFor(duration, name)
+    if not isMoveAllowed(name) then return end
+    setBlock(true)
+    task.wait(duration)
+    setBlock(false)
+end
+
+local function listenServiceMulti(serviceName, handlers)
+    local ok, re = pcall(function()
+        return getService(serviceName):WaitForChild("Effects")
+    end)
+    if not ok then return end
+    re.OnClientEvent:Connect(function(effect, ...)
+        if not isAlive() then return end
+        local handler = handlers[effect]
+        if handler then handler(...) end
+    end)
+end
+
+task.spawn(function()
+    while isAlive() do
+        if getgenv().TZE.Humanize.RandomBlock and not blocking then
+            task.wait(math.random(3, 8))
+            if not getgenv().TZE.Humanize.RandomBlock then continue end
+            setBlock(true)
+            task.wait(math.random(3, 8) / 10)
+            setBlock(false)
+        else
+            task.wait(1)
+        end
+    end
+end)
+
+getService("LapseBlueService"):WaitForChild("Effects").OnClientEvent:Connect(function(effect, victim)
+    if not isAlive() then return end
+    if not getgenv().TZE.Misc.LapseBlue then return end
+    if effect ~= "BlueGrab" then return end
+    if not isMe(victim) then return end
+    blockFor(1, "Lapse Blue")
+end)
+
+listenServiceMulti("TendrilGrabService", {
+    ["Grab"] = function(_, victim, constraint)
+        if not getgenv().TZE.Misc.TendrilGrab then return end
+        if not isMe(victim) then return end
+        if not isMoveAllowed("Tendril Grab") then return end
+        setBlock(true)
+        task.spawn(function()
+            while constraint and constraint.Parent do task.wait(0.05) end
+            setBlock(false)
+            fireM1()
+        end)
+    end,
+})
+
+listenServiceMulti("ProjectionBreakerService", {
+    ["Hit"] = function(_, victim)
+        if not getgenv().TZE.Misc.ProjectionBreaker then return end
+        if not isMe(victim) then return end
+        blockFor(0.8, "Projection Breaker")
+        fireM1()
+    end,
+})
+
+listenServiceMulti("BleedoutService", {
+    ["Hit"] = function(_, victim)
+        if not getgenv().TZE.Misc.Bleedout then return end
+        if not isMe(victim) then return end
+        blockFor(0.5, "Bleedout")
+    end,
+    ["Hit2"] = function(_, victim)
+        if not getgenv().TZE.Misc.Bleedout then return end
+        if not isMe(victim) then return end
+        blockFor(0.5, "Bleedout")
+    end,
+    ["Hit2Freeze"] = function(_, victim)
+        if not getgenv().TZE.Misc.Bleedout then return end
+        if not isMe(victim) then return end
+        blockFor(1, "Bleedout")
+    end,
+})
+
+listenServiceMulti("CursoryImpactService", {
+    ["UhOh"] = function(victim)
+        if not getgenv().TZE.Misc.CursoryImpact then return end
+        if not isMe(victim) then return end
+        blockFor(0.8, "Cursory Impact")
+    end,
+    ["Grab"] = function(victim)
+        if not getgenv().TZE.Misc.CursoryImpact then return end
+        if not isMe(victim) then return end
+        blockFor(1, "Cursory Impact")
+        fireM1()
+    end,
+    ["Hit"] = function(_, victim)
+        if not getgenv().TZE.Misc.CursoryImpact then return end
+        if not isMe(victim) then return end
+        blockFor(0.5, "Cursory Impact")
+    end,
+    ["Hit2"] = function(_, victim)
+        if not getgenv().TZE.Misc.CursoryImpact then return end
+        if not isMe(victim) then return end
+        blockFor(0.5, "Cursory Impact")
+    end,
+})
+
+local function listenDecisive(serviceName)
+    listenServiceMulti(serviceName, {
+        ["Hit"] = function(_, victim)
+            if not getgenv().TZE.Misc.DecisiveStrike then return end
+            if not isMe(victim) then return end
+            blockFor(0.5, "Decisive Strike")
+        end,
+        ["Hit2"] = function(_, victim)
+            if not getgenv().TZE.Misc.DecisiveStrike then return end
+            if not isMe(victim) then return end
+            blockFor(0.5, "Decisive Strike")
+        end,
+        ["Hit3"] = function(_, victim)
+            if not getgenv().TZE.Misc.DecisiveStrike then return end
+            if not isMe(victim) then return end
+            blockFor(0.5, "Decisive Strike")
+        end,
+    })
+end
+listenDecisive("DecisiveStrikeService")
+listenDecisive("DecisiveStrike2Service")
+
+listenServiceMulti("NanamiService", {
+    ["Hit"] = function(_, victim)
+        if not getgenv().TZE.Misc.Nanami then return end
+        if not isMe(victim) then return end
+        blockFor(0.5, "Nanami")
+    end,
+    ["ChaseHit"] = function(_, victim)
+        if not getgenv().TZE.Misc.Nanami then return end
+        if not isMe(victim) then return end
+        blockFor(0.5, "Nanami")
+        fireM1()
+    end,
+})
+
+listenServiceMulti("NaoyaService", {
+    ["Grip"] = function(_, victim)
+        if not getgenv().TZE.Misc.Naoya then return end
+        if not isMe(victim) then return end
+        blockFor(1.5, "Naoya Grip")
+        fireM1()
+    end,
+    ["Spin"] = function(attacker, constraint)
+        if not getgenv().TZE.Misc.Naoya then return end
+        if not isMoveAllowed("Naoya Spin") then return end
+        local char = LocalPlayer.Character
+        if not char then return end
+        local root = char:FindFirstChild("HumanoidRootPart")
+        local aroot = attacker:FindFirstChild("HumanoidRootPart")
+        if not root or not aroot then return end
+        if (root.Position - aroot.Position).Magnitude > getRange("Naoya Spin") then return end
+        setBlock(true)
+        task.spawn(function()
+            while constraint and constraint:IsDescendantOf(workspace) do task.wait(0.05) end
+            setBlock(false)
+        end)
+    end,
+})
+
+listenServiceMulti("MahitoService", {
+    ["Hit"] = function(victim)
+        if not getgenv().TZE.Misc.Mahito then return end
+        if not isMe(victim) then return end
+        blockFor(0.5, "Mahito")
+    end,
+    ["ChaseHit"] = function(_, victim)
+        if not getgenv().TZE.Misc.Mahito then return end
+        if not isMe(victim) then return end
+        blockFor(0.5, "Mahito")
+        fireM1()
+    end,
+    ["BlackFlashHit"] = function(_, victim)
+        if not getgenv().TZE.Misc.Mahito then return end
+        if not isMe(victim) then return end
+        blockFor(0.8, "Mahito")
+    end,
+    ["Eat"] = function(victim)
+        if not getgenv().TZE.Misc.Mahito then return end
+        if not isMe(victim) then return end
+        blockFor(1, "Mahito")
+    end,
+})
+
+listenServiceMulti("GojoService", {
+    ["Hit"] = function(victim)
+        if not getgenv().TZE.Misc.Gojo then return end
+        if not isMe(victim) then return end
+        blockFor(0.5, "Gojo")
+    end,
+    ["ChaseHit"] = function(_, victim)
+        if not getgenv().TZE.Misc.Gojo then return end
+        if not isMe(victim) then return end
+        blockFor(0.5, "Gojo")
+        fireM1()
+    end,
+    ["AerialHit"] = function(_, victim)
+        if not getgenv().TZE.Misc.Gojo then return end
+        if not isMe(victim) then return end
+        blockFor(0.8, "Gojo")
+    end,
+    ["DragStart"] = function(_, victim)
+        if not getgenv().TZE.Misc.Gojo then return end
+        if not isMe(victim) then return end
+        blockFor(0.5, "Gojo")
+    end,
+    ["DragThrow"] = function(victim)
+        if not getgenv().TZE.Misc.Gojo then return end
+        if not isMe(victim) then return end
+        blockFor(0.8, "Gojo")
+        fireM1()
+    end,
+})
+
+listenServiceMulti("ItadoriService", {
+    ["Hit"] = function(victim)
+        if not getgenv().TZE.Misc.Itadori then return end
+        if not isMe(victim) then return end
+        blockFor(0.5, "Itadori")
+    end,
+    ["ChaseHit"] = function(_, victim)
+        if not getgenv().TZE.Misc.Itadori then return end
+        if not isMe(victim) then return end
+        blockFor(0.5, "Itadori")
+        fireM1()
+    end,
+    ["CleaveGrab"] = function(victim)
+        if not getgenv().TZE.Misc.Itadori then return end
+        if not isMe(victim) then return end
+        blockFor(1, "Itadori")
+    end,
+    ["CleaveHit"] = function(_, victim)
+        if not getgenv().TZE.Misc.Itadori then return end
+        if not isMe(victim) then return end
+        blockFor(1, "Itadori")
+        fireM1()
+    end,
+    ["BlackFlashHit"] = function(_, victim)
+        if not getgenv().TZE.Misc.Itadori then return end
+        if not isMe(victim) then return end
+        blockFor(0.8, "Itadori")
+    end,
+})
+
+listenServiceMulti("TodoService", {
+    ["Hit"] = function(victim)
+        if not getgenv().TZE.Misc.Todo then return end
+        if not isMe(victim) then return end
+        blockFor(0.5, "Todo")
+    end,
+    ["ChaseHit"] = function(_, victim)
+        if not getgenv().TZE.Misc.Todo then return end
+        if not isMe(victim) then return end
+        blockFor(0.5, "Todo")
+        fireM1()
+    end,
+    ["GrabHit"] = function(_, victim)
+        if not getgenv().TZE.Misc.Todo then return end
+        if not isMe(victim) then return end
+        blockFor(0.8, "Todo")
+        fireM1()
+    end,
+    ["Swap"] = function(p1, p2)
+        if not getgenv().TZE.Misc.Todo then return end
+        if not (isMe(p1) or isMe(p2)) then return end
+        blockFor(0.5, "Todo")
+    end,
+})
+
+local function watchTarget(target)
+    if Characters[target] then return end
+    if isLocalPlayer(target) then return end
+    local hum = target:FindFirstChildOfClass("Humanoid")
+    if not hum then return end
+
+    Characters[target] = true
+    local animator = hum:WaitForChild("Animator")
+
+    animator.AnimationPlayed:Connect(function(track)
+        if not isAlive() then return end
+        if isLocalPlayer(target) then return end
+
+        local fpsOffset = dt > 0.05 and 0.1 or 0
+        local animId = track.Animation.AnimationId
+
+        if getgenv().TZE.Combat.BlockDash and DashIDs[animId] then
+            if not isMoveAllowed("Chase") then return end
+            if inRange(target, "Chase") then
+                if fpsOffset > 0 then task.wait(fpsOffset) end
+                setBlock(true)
+                track.Stopped:Wait()
+                setBlock(false)
+            end
+            return
+        end
+
+        local special = SpecialAnims[animId]
+        if special then
+            if not inRange(target, special.name) then return end
+            if not isMoveAllowed(special.name) then return end
+
+            if special.blockIfFacingAway then
+                if not isFacingAway(target) then return end
+                setBlock(true)
+                track.Stopped:Wait()
+                setBlock(false)
+                fireM1()
+                return
+            end
+
+            if special.punishMidAnim then
+                task.wait(0.3)
+                fireM1()
+                return
+            end
+
+            if special.turnCamera then
+                turnToFace(target)
+                setBlock(true)
+                track.Stopped:Wait()
+                setBlock(false)
+                fireM1()
+                return
+            end
+
+            if special.fullDuration then
+                setBlock(true)
+                track.Stopped:Wait()
+                setBlock(false)
+                return
+            end
+
+            if special.holdExtra then
+                setBlock(true)
+                track.Stopped:Wait()
+                task.wait(special.holdExtra)
+                setBlock(false)
+                fireM1()
+                return
+            end
+
+            return
+        end
+
+        if not getgenv().TZE.Combat.Autoblock then return end
+        if not BlockableIDs[animId] then return end
+        if not inRange(target, track.Animation.Name) then return end
+        if getgenv().TZE.Combat.FacingCheck and not isFacing(target) then return end
+        if math.random(1, 100) > getgenv().TZE.Combat.BlockChance then return end
+        if getgenv().TZE.Humanize.MissBlock and math.random(1, 10) == 1 then return end
+        if not isMoveAllowed(track.Animation.Name) then return end
+
+        local delay = getBlockDelay() + fpsOffset
+        if delay > 0 then task.wait(delay) end
+        setBlock(true)
+        track.Stopped:Wait()
+        setBlock(false)
+
+        if getgenv().TZE.Humanize.AntiBait and not isFacing(target) then return end
+        fireM1()
+    end)
+
+    hum.Died:Connect(function()
+        if not isAlive() then return end
+        Characters[target] = nil
+    end)
+end
+
+local function processContainer(container)
+    for _, child in ipairs(container:GetChildren()) do
+        if child:IsA("Model") or child:IsA("Folder") then
+            if child:FindFirstChildOfClass("Humanoid") then watchTarget(child) end
+            processContainer(child)
+        end
+    end
+end
+
+local charContainer = workspace:WaitForChild("Characters")
+processContainer(charContainer)
+
+charContainer.ChildAdded:Connect(function(child)
+    task.wait(0.1)
+    if not isAlive() then return end
+    if child:IsA("Model") or child:IsA("Folder") then
+        if child:FindFirstChildOfClass("Humanoid") then watchTarget(child) end
+        processContainer(child)
+    end
+end)
